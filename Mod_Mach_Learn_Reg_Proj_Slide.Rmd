@@ -1,0 +1,317 @@
+---
+title: "NBA Salaries With Machine Learning Models"
+author: "AJ, Jack, Aaron"
+date: "3/11"
+output:
+  ioslides_presentation: default
+  beamer_presentation:
+    theme: Madrid
+    colortheme: seahorse
+  slidy_presentation: default
+fontsize: 9pt
+graphics: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, message = FALSE, warning = FALSE, fig.align = "center", fig.height = 4, fig.width = 6,  out.width = "75%")
+library(knitr)
+library(tidyverse)
+library(moderndive)
+library(caret)
+library(mgcv)
+library(rpart)
+library(rpart.plot)
+```
+
+
+## Outline
+
+In this presentation, we will do the following...
+
+
+\pause
+
+- Explain our data set. 
+
+- Showcase our basic data visualizations (Simple Linear Regression, Parallel Slopes, 
+Multiple Linear Model with Interaction)
+
+- Review our Caret Package Models and Cross Validated results
+
+- Review our GAM/Polynomial Models and Cross Validated results
+
+
+- Brief Conclusion
+
+# Our Data
+
+## Data
+- NBA statistics and salaries for 2022-2023 season
+- Our goal is to try to estimate salaries based on categorical and numeric variables. 
+- Many of the statistics (total of around 50) provided for players are 
+"obscure" (not interpretable for most people, even basketball fans) 
+- We chose specific statistics that are interpretable/showed correlation to salary
+- Important Note: Salary is extremely difficult to predict. Qualitative statistics cannot be 
+the only measure of player salaries 
+  - player image, country of origin, background, social media presence, sports media coverage, etc.
+
+# Linear Regression Models
+
+\pause
+
+## Simple Linear Regression Model
+
+\pause
+
+- Simple Linear Regression Model 
+  - Points as the explanatory numeric variable
+  - Trying to predict salary
+
+  \pause
+  
+```{r}
+salary = read_csv("nba_2022-23_all_stats_with_salary.csv")
+set.seed(123)
+# Data Cleaning
+salary$Position[salary$Position == "PG-SG"] = "PG"
+salary$Position[salary$Position == "SG-PG"] = "SG"
+salary$Position[salary$Position == "SF-SG"] = "SF"
+salary$Position[salary$Position == "SF-PF"] = "SF"
+# Training Set, 467 * 0.7 = 326.9 = 327 
+
+train_set = sample(1:467, 327)
+salary_1 = salary[train_set,]
+
+ggplot(salary_1, aes(x=PTS, y=Salary)) + geom_point() + 
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+## Parallel Slopes Model
+
+- Parallel Slopes Regression Model 
+  - Points (numeric) and Position (categorical) 
+  - Predicting Salary
+
+\pause
+
+```{r}
+# Parallel Slopes Model 
+p_slope_mdl = lm(Salary~Position + PTS, data = salary_1)
+
+ggplot(salary_1, aes(x=PTS, y=Salary, color=Position)) + 
+  geom_point() + 
+  geom_parallel_slopes(se=FALSE)
+```
+
+## Multiple Linear Regression Model
+- Multiple Linear Regression Model w/ Interaction
+  - PTS*Position, Significant p-values with Interaction
+  - Again, predicting Salary
+
+```{r}
+# Multiple Linear Model + Interaction
+# 2 Different explanatory variables: PTS, Position
+mult_lin_mdl = lm(Salary~Position*PTS, data = salary_1)
+#summary(mult_lin_mdl)
+#mult_lin_mdl$coefficients
+
+# Visualization 
+ggplot(salary_1, aes(x=PTS, y=Salary, color=Position)) + 
+  geom_point(alpha=0.3) + 
+  geom_smooth(method="lm", se=FALSE)
+```
+
+# Caret Package Models
+
+## Regression Trees Pt1 - Complexity x RMSE
+
+``` {r}
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 10)
+
+caretTree  <-  train(Salary ~ Position + Team + Age + PTS + PER + WS + OBPM,
+                    data = salary,
+                    method = "rpart",
+                    trControl=trctrl,
+                    tuneGrid = expand.grid(cp=seq(0, 0.01, 0.0001))
+)
+
+plot(caretTree)
+
+```
+  - train(Salary ~ Position + Team + Age + PTS + PER + WS + OBPM)
+
+## Regression Trees Pt2 - Tree
+
+``` {r}
+rpart.plot(caretTree$finalModel)
+
+```
+
+
+## Regression Trees Pt3 - Cross Validation Results
+``` {r}
+caretTree$results[caretTree$results$cp==caretTree$bestTune[1,1], ]
+```
+  - Note: RMSE & r-squared
+
+## Multiple Linear Model Cross Validation
+``` {r}
+# Linear Model
+trctrllm <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
+
+caretLM<-  train(Salary ~ Age + PTS, # removed categorical variables
+                  data = salary,  
+                  method = "lm",
+                  trControl=trctrllm
+)
+```
+
+``` {r}
+caretLM$results
+```
+  
+- Variables Used: Age & Points
+  - Only variables that consistently had significant p-values
+
+
+# GAM & Polynomial Models
+
+## GAM Model 1
+
+``` {r}
+mod_gam = gam(Salary ~ s(PTS) + Age, data = salary)
+ggplot(salary, aes(x=PTS, y=Salary))+
+  geom_point()+
+  geom_line(aes(y=mod_gam$fitted.values), color="cyan", size=1)+
+  ggtitle("GAM Model 1")
+```
+
+- mod_gam = gam(Salary ~ s(PTS) + Age, data = salary)
+  - Interpretation: s(PTS) using spline-based, Age treated as a linear predictor, Risk of Overfitting
+
+## Cross Validated Results: GAM Model 1
+
+``` {r}
+trctrlgam <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
+
+caretgam<-  train(Salary ~ Age + PTS, # removed categorical variables
+                  data = salary,  
+                  method = "gam",
+                  trControl=trctrlgam
+)
+
+caretgam$results
+```
+
+## GAM Model 2
+
+``` {r}
+mod_gam2 <- gam(Salary ~ s(PTS), data = salary)
+ggplot(salary, aes(x=PTS, y=Salary))+
+  geom_point()+
+  geom_line(aes(y=mod_gam2$fitted.values), color="red4", size=1)+
+  ggtitle("GAM Model 2")
+```
+
+- mod_gam2 <- gam(Salary ~ s(PTS), data = salary)
+  - s(PTS): Using PTS as spline-based, less risk of overfitting than using 
+            both PTS and Age as spline-based
+            
+## Cross Validated Results: GAM Model 2
+
+``` {r}
+trctrlgam2 <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
+
+caretgam2<-  train(Salary ~ PTS, # removed categorical variables
+                  data = salary,  
+                  method = "gam",
+                  trControl=trctrlgam2
+)
+
+caretgam2$results
+```
+  
+## Polynomial Models -- PTS & Salary
+
+``` {r}
+## DEGREE 1: Linear Model
+model_1 <- lm(Salary ~ poly(PTS,1), data = salary)
+
+ggplot(salary, aes(x=PTS, y=Salary))+
+  geom_point()+
+  geom_line(aes(y=model_1$fitted.values), color="red", size=1)+
+  ggtitle("Degree 1")
+```
+
+## Degree 2
+``` {r}
+## Degree 2: Quadratic
+model_2 <- lm(Salary ~ poly(PTS,2), data = salary)
+
+ggplot(salary, aes(x=PTS, y=Salary))+
+  geom_point()+
+  geom_line(aes(y=model_2$fitted.values), color="green4", size=1)+
+  ggtitle("Degree 2")
+```
+
+
+## Degree 3: Cubic
+``` {r}
+model_3 <- lm(Salary ~ poly(PTS,3), data = salary)
+
+ggplot(salary, aes(x=PTS, y=Salary))+
+  geom_point()+
+  geom_line(aes(y=model_3$fitted.values), color="green4", size=1)+
+  ggtitle("Degree 3")
+```
+
+## Degree 5
+``` {r}
+model_5 <- lm(Salary ~ poly(PTS,5), data = salary)
+
+ggplot(salary, aes(x=PTS, y=Salary))+
+  geom_point()+
+  geom_line(aes(y=model_5$fitted.values), color="green4", size=1)+
+  ggtitle("Degree 5")
+```
+
+## Degree 10
+``` {r}
+model_10 <- lm(Salary ~ poly(PTS,10), data = salary)
+
+ggplot(salary, aes(x=PTS, y=Salary))+
+  geom_point()+
+  geom_line(aes(y=model_10$fitted.values), color="green4", size=1)+
+  ggtitle("Degree 10")
+```
+
+## Significance
+``` {r}
+summary(model_5)
+```
+
+## Cross Validated Results
+
+``` {r}
+trctrlpoly <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
+
+caretpoly<-  train(Salary ~ poly(PTS, 2),
+                  data = salary,  
+                  method = "lm",
+                  trControl=trctrlpoly
+)
+
+caretpoly$results
+```
+  - Note from previous slide: Significant up to third poly level
+
+# Our Brief Conclusions 
+
+# Questions? 
+
+
+
+
+
+
+
