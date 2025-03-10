@@ -11,7 +11,7 @@ But this is not always true. While relationships certainly exist between player 
 
 What is often not looked into is the "other" factors of what determines salary, such as player image, country of origin, background, social media presence, sports media coverage, etc. 
 
-In other words, if you are the best player, does that mean you get paid the most. And if not, why? Because it's probably not your stats. 
+In other words, if you are the best player, does that mean you get paid the most? And if not, why? Because it's probably not your stats. 
 
 In this project, I aim to explore this precise concept through various Machine Learning Modeling methods. Furthermore, I will keep updating this repository with new information about player salaries, NBA CBA salary rule changes, and other information. 
 
