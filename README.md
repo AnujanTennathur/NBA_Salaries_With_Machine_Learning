@@ -17,3 +17,5 @@ In this project, I aim to explore this precise concept through various Machine L
 
 IMPORTANT NOTE: In it's current scope, this project is looking at qualititave, nba statistics as a means of exploring relationships between performance and salary. However, I will continue to add to this project by incorporating more quantitative information into my database and models. 
 
+In addition, to view the project in slideshow form, please open and knit. 
+
