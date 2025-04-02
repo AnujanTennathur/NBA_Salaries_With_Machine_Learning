@@ -1,0 +1,126 @@
+---
+title: "Classification_Project_Code_NBA"
+author: "AJ Tennathur"
+date: "2025-04-01"
+output:
+  html_document:
+    collapsed: no
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '5'
+---
+
+# Data Wrangling/Viz
+
+``` {r}
+ggpairs(salary, aes(color = Position), columns = c(3,4,5))
+```
+
+
+# KNN 
+
+# Standardize
+``` {r}
+# use scale to standardize
+salary_2<-salary
+salary_2[,25:28] <-scale(salary_2[,25:28])
+salary_2<-data.frame(salary_2)
+
+# now check the standardized variance
+sd(salary_2[ ,25])
+sd(salary_2[ ,28])
+```
+
+# Visualize
+
+``` {r}
+ggpairs(salary_2, aes(color = Position), columns = c(25,26,27,28))
+```
+
+``` {r}
+ggplot(data = salary_2, aes(x = AST, y = TRB, col = Position)) + 
+  geom_point(alpha=0.3)
+```
+
+``` {r}
+set.seed(239)
+
+PG<- salary_2%>%
+  filter(Position=="PG")
+
+SG<- salary_2%>%
+  filter(Position=="SG")
+
+SF<- salary_2%>%
+  filter(Position=="SF")
+
+PF<- salary_2%>%
+  filter(Position=="PF")
+
+C<- salary_2%>%
+  filter(Position=="C")
+
+# 50 observations from each
+# Take 60% to train (30) and 40% to test (20)
+trainnba <- sample(1:50, 30)
+
+nba.train<- rbind(PG[trainnba,], SG[trainnba,], SF[trainnba,], PF[trainnba,], C[trainnba,])
+nba.test<- rbind(PG[-trainnba,], SG[-trainnba,], SF[-trainnba,], 
+                   PF[-trainnba,], C[-trainnba,])
+```
+
+
+``` {r}
+library(class)
+knnNBA<- knn(train = nba.train[,25:28], 
+              test = nba.test[,25:28], 
+              cl = nba.train$Position, 
+              k = 20)
+## correct
+mean(knnNBA==nba.test$Position)
+mean(knnNBA!=nba.test$Position)
+```
+
+# Cross Validation
+
+``` {r}
+error <- rep(0,15)
+for (i in 1:15) {
+  knnNBA<- knn(train = nba.train[,25:28], test = nba.test[,25:28], cl = nba.train$Position, k = i)
+  error[i] = 1- mean(knnNBA == nba.test$Position)
+}
+
+plot_data <- data.frame(k=1:15,error)
+
+ggplot(data = plot_data, aes(x = k, y = error)) +
+  geom_line(color = "blue")+
+  xlab("Neighborhood Size")
+```
+
+# Prediction for best k
+
+``` {r}
+nba_pred <- knn(train = nba.train[,25:28], 
+                 test = nba.test[,25:28], 
+                 cl = nba.train$Position, 
+                 k=10)
+
+table(nba.test$Position, nba_pred)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
