@@ -1,7 +1,7 @@
 # NBA_Salaries_And_Player_Position_With_Machine_Learning
 IMPORTANT NOTE: Project is in progress, more models and data will be added to this repository. 
 
-A comprehensive look at NBA salaries through machine learning modeling. 
+A comprehensive look at NBA salaries and NBA Player Positions through machine learning modeling. 
 
 NBA salaries have continued to grow at staggering rates, with teams paying individual players at rates that entire rosters used to make combined. With each passing year, more and more players benefit from rapidly increasing salaries and bonuses. 
 
