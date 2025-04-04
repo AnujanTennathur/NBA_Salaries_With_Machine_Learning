@@ -1,4 +1,4 @@
-# NBA_Salaries_With_Machine_Learning
+# NBA_Salaries_And_Player_Position_With_Machine_Learning
 IMPORTANT NOTE: Project is in progress, more models and data will be added to this repository. 
 
 A comprehensive look at NBA salaries through machine learning modeling. 
