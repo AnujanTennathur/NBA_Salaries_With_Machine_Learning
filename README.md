@@ -17,8 +17,6 @@ In other words, if you are the best player, does that mean you get paid the most
 
 In this project, I aim to explore this precise concept through various Machine Learning Modeling methods. Furthermore, I will keep updating this repository with new information about player salaries, NBA CBA salary rule changes, and other information. 
 
-IMPORTANT NOTE: In it's current scope, this project is looking at quantitative, nba statistics as a means of exploring relationships between performance and salary. However, I will continue to add to this project by incorporating more qualitative information into my database and models. 
-
 In addition to salaries, what about predicting a specific player's position? What if you were to obtain a random player's stats, with no knowledge of what their name was, or what position they played. How would we be able to predict what position they play? 
 
 To answer this question, I have generated classification models of different types, with various numeric and non-numeric explanatory variables, to see if we can accurately predict player position through statistical variables. Similar to salary, I will be constantly updating this database with these models. 
