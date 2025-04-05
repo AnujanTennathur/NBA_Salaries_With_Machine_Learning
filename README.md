@@ -19,8 +19,7 @@ In addition to salaries, what about predicting a specific player's position? Wha
 
 To answer this question, I have generated classification models of different types, with various numeric and non-numeric explanatory variables, to see if we can accurately predict player position through statistical variables. Similar to salary, I will be frequently updating this database with these models. 
 
-In this project, I aim to explore these precise concepts through various Machine Learning Modeling methods. Furthermore, I will keep updating this repository with new information about player salaries, NBA CBA salary rule changes, and other information. 
-
+In this project, I aim to explore these precise concepts through various Machine Learning Modeling methods. I will use two different seasons to complete the analysis, and to observe possible trends with salary, statistics, and player positions over the last two decades of the NBA. 
 
 
 
