@@ -1,5 +1,5 @@
 # NBA_Salaries_And_Player_Position_With_Machine_Learning
-IMPORTANT NOTE: Project is in progress, more models and data will be added to this repository. 
+IMPORTANT NOTE: Project is in progress, more models and data will be added to this repository. Also, to view code in slide form, download and knit code.
 
 A comprehensive look at NBA salaries and NBA Player Positions through machine learning modeling. 
 
