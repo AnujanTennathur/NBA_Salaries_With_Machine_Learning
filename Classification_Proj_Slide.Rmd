@@ -1,6 +1,6 @@
 ---
 title: "NBA Positions With Machine Learning Models"
-author: "AJ, Jack, Aaron"
+author: "AJ Tennathur"
 date: ""
 output:
   ioslides_presentation: default
