@@ -17,7 +17,6 @@ library(rpart.plot)
 library(dplyr)
 ```
 
-## Aaron and Aj delete these first 3 chunks and uncomment the third chunk
 ```{r}
 early_nba<- read.csv("/Users/jackcarr/Downloads/NBA_Dataset.csv")
 nba_2003<- early_nba %>% filter(season == 2003)
@@ -39,7 +38,6 @@ clean_nba03$pos[clean_nba03$pos == "SF-PF"] = "SF"
 write.csv(clean_nba03, "complete_nba_2003.csv", row.names = FALSE)
 ```
 
-## Uncomment this chunk and delete the above
 ```{r}
 clean_nba03 <- read_csv("/Users/jackcarr/Downloads/Data251/complete_nba_2003.csv")
 ```
