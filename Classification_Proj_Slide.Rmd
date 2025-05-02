@@ -1,0 +1,499 @@
+---
+title: "NBA Positions With Machine Learning Models"
+author: "AJ, Jack, Aaron"
+date: ""
+output:
+  ioslides_presentation: default
+  beamer_presentation:
+    theme: Madrid
+    colortheme: seahorse
+  slidy_presentation: default
+fontsize: 9pt
+graphics: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, message = FALSE, warning = FALSE, fig.align = "center", fig.height = 4, fig.width = 6,  out.width = "75%")
+library(knitr)
+library(tidyverse)
+library(moderndive)
+library(caret)
+library(mgcv)
+library(rpart)
+library(rpart.plot)
+library(knitr)
+library(tidyverse)
+library(moderndive)
+library(caret)
+library(mgcv)
+library(rpart)
+library(rpart.plot)
+library(GGally)
+library(ipred)
+library(vip)
+library(randomForest)
+library(xgboost)
+```
+
+
+## Outline
+
+In this presentation, we will do the following...
+
+
+\pause
+
+- Explain our data set. 
+
+- KNN Model, draw conclusions
+
+- Decision/Classification Tree & Prune, draw conclusions
+
+- Bagging Model, variable importance, draw conclusions
+
+- Random Forests Models, draw conclusions
+
+- Boosting Models, draw conclusions
+
+- Logistic Regressions
+
+- LDA/QDA Models
+
+- Brief Conclusion
+
+# Our Data
+
+## Data
+- NBA statistics and Positions for 2022-2023 season
+- Our goal is to try to predict player position (Point Guard, Shooting Guard, Center, Etc.) based on various explanatory variables.
+- Many of the statistics (total of around 50) provided for players are 
+"obscure" (not interpretable for most people, even basketball fans) 
+- We chose specific statistics that are interpretable/showed correlation to position
+- Important Note: Player Position is extremely difficult to predict. Player position is 
+also very interpretable, as different people may consider the same player to play a different position
+
+## Data Pt. 2
+- 
+- We are using about 15 "variables."
+- Most of our predictions will show high error and not very good accuracy despite 
+the use of various different variables that impact player position
+- This further emphasizes how difficult predicting player position is. 
+
+
+# Models
+
+\pause
+
+## KNN Model
+
+  
+```{r}
+salary = read_csv("nba_2022-23_all_stats_with_salary.csv")
+set.seed(123)
+# Data Cleaning
+salary$Position[salary$Position == "PG-SG"] = "PG"
+salary$Position[salary$Position == "SG-PG"] = "SG"
+salary$Position[salary$Position == "SF-SG"] = "SF"
+salary$Position[salary$Position == "SF-PF"] = "SF"
+
+salary_2=salary
+salary_2[,25:31] =scale(salary_2[,25:31])
+salary_2=data.frame(salary_2)
+
+salary_2$Position = as.factor(salary_2$Position)
+
+set.seed(239)
+
+PG= salary_2%>%
+  filter(Position=="PG")
+
+SG= salary_2%>%
+  filter(Position=="SG")
+
+SF= salary_2%>%
+  filter(Position=="SF")
+
+PF= salary_2%>%
+  filter(Position=="PF")
+
+C= salary_2%>%
+  filter(Position=="C")
+
+# 50 observations from each
+# Take 60% to train (30) and 40% to test (20)
+trainnba = sample(1:50, 30)
+
+nba.train= rbind(PG[trainnba,], SG[trainnba,], SF[trainnba,], PF[trainnba,], C[trainnba,])
+nba.test= rbind(PG[-trainnba,], SG[-trainnba,], SF[-trainnba,], 
+                   PF[-trainnba,], C[-trainnba,])
+
+library(class)
+knnNBA= knn(train = nba.train[,25:31], 
+              test = nba.test[,25:31], 
+              cl = nba.train$Position, 
+              k = 16)
+## correct
+mean(knnNBA==nba.test$Position) # Correct
+mean(knnNBA!=nba.test$Position) # Error
+
+error = rep(0,20)
+for (i in 1:20) {
+  knnNBA= knn(train = nba.train[,25:31], test = nba.test[,25:31], cl = nba.train$Position, k = i)
+  error[i] = 1- mean(knnNBA == nba.test$Position)
+}
+
+plot_data = data.frame(k=1:20,error)
+
+ggplot(data = plot_data, aes(x = k, y = error)) +
+  geom_line(color = "blue")+
+  xlab("Neighborhood Size")
+```
+
+
+## KNN Model Cont. 
+
+``` {r}
+nba_pred = knn(train = nba.train[,25:31], 
+                 test = nba.test[,25:31], 
+                 cl = nba.train$Position, 
+                 k=19)
+
+table(nba.test$Position, nba_pred)
+
+mean(nba_pred==nba.test$Position)
+
+```
+
+## Classification/Decision Trees Models
+
+``` {r}
+set.seed(234)
+library(caret)
+
+caretSampnba_2 = createDataPartition(salary_2$Position,
+                                     p = 0.7, 
+                                     list = FALSE)
+
+traincaretnba_2 = salary_2[caretSampnba_2,]
+testcaretnba_2 = salary_2[-caretSampnba_2,]
+
+traincaretnba_2 = traincaretnba_2 %>%
+  select(
+    "Position", "TRB", "AST", "STL", "BLK", "PTS", "TOV", "PER", "OBPM", "FT", "FTA", 
+    "X2P", "X2PA", "X3P", "X3PA", 
+  )
+
+testcaretnba_2 = testcaretnba_2 %>%
+  select(
+    "Position", "TRB", "AST", "STL", "BLK", "PTS", "TOV", "PER", "OBPM", "FT", "FTA", 
+    "X2P", "X2PA", "X3P", "X3PA", 
+  )
+
+library(rpart)
+
+classtree = rpart(Position ~ ., 
+                  data = traincaretnba_2, 
+                  method = "class")
+rpart.plot(classtree)
+```
+
+## Classification/Decision Trees Models Cont. 
+```{r}
+plotcp(classtree)
+printcp(classtree)
+```
+
+## Classification/Decision Trees Models Cont. 
+
+``` {r}
+prune_classtree = prune(classtree, cp = 0.0285)
+rpart.plot(prune_classtree)
+```
+
+
+## Prediction -- Default Tree
+
+``` {r}
+predTree1=predict(classtree, testcaretnba_2, type="class")
+
+cmTree1=table(testcaretnba_2$Position, predTree1)
+cmTree1
+
+mean(testcaretnba_2$Position==predTree1)
+```
+
+## Prediction -- Prune Tree
+```{r}
+predTree2=predict(prune_classtree, testcaretnba_2, type="class")
+
+cmTree2=table(testcaretnba_2$Position, predTree2)
+cmTree2
+
+mean(testcaretnba_2$Position==predTree2)
+```
+
+## Bagging (Explanation)
+
+- While classification decision trees give us a general view of our model, 
+  another method that is effective is Bagging, which stands for 
+  “bootstrap aggregation”. 
+- Random bootstrap samples (with replacement) of the data are used to create trees.
+- It then aggregates these different trees (that are based on different subset samples) to create a final model. 
+- The big idea is that averaging a set of observations reduces variance.
+
+## Bagging Model -- Ipred Bagging
+
+``` {r}
+### BAG
+set.seed(252)
+pimaBag = bagging(Position ~ .,
+                   data = traincaretnba_2,
+                   nbagg = 150,   
+                   coob = TRUE,
+                   control = rpart.control(minsplit = 2, cp = 0))
+
+## PREDICT
+predBag=predict(pimaBag, testcaretnba_2, type="class")
+
+## CONFUSION MATRIX
+cmBag=table(testcaretnba_2$Position, predBag)
+cmBag
+
+mean(testcaretnba_2$Position==predBag) # correct rate
+```
+
+## Bagging Model -- Caret
+
+``` {r}
+
+set.seed(253)
+caretBag = train(Position ~., 
+               data = traincaretnba_2, 
+               method = "treebag",
+               trControl = trainControl("cv", number = 10),
+               importance = TRUE
+)
+
+predCaretBag = caretBag %>% predict(testcaretnba_2)
+
+table(predCaretBag, testcaretnba_2$Position)
+
+mean(predCaretBag == testcaretnba_2$Position) # Correct Rate
+
+```
+
+## Bag Variable Importance 
+-- Let's see which variables are having the largest 
+"influence" on our model
+
+``` {r}
+vip(caretBag)
+```
+
+## Random Forests (Explanation)
+
+- There are some problems with Bagging 
+- Trees can be very similar
+- Dominated by a few strong / moderately strong predictor
+- Bagged trees can be highly correlated
+- Does not lead to large reduction in variance when averaging
+- We can further improve on bagging through random forests modeling. 
+
+## Random Forests Model
+
+``` {r}
+set.seed(250)
+
+caretRF = train(Position ~., 
+                data = traincaretnba_2, 
+                method = "rf", 
+                trControl = trainControl("cv", number = 10),
+                importance = TRUE
+          )
+
+predCaretRF = caretRF %>% predict(testcaretnba_2)
+table(predCaretRF, testcaretnba_2$Position)
+
+mean(predCaretRF==testcaretnba_2$Position)
+```
+
+## Random Forests Cont. 
+
+-- Variable Importance: Let's see which variables are contributing to "splits" and 
+which variables are reducing gini (impurity). 
+
+``` {r}
+varImpPlot(caretRF$finalModel, type = 1)
+```
+
+## 
+``` {r}
+varImpPlot(caretRF$finalModel, type = 2)
+```
+
+## Boosting (Explanation)
+- Boosting is essentially growing the decision trees sequentially. 
+- The model learns slowly (updates based on some scaled version of the previous tree).
+- It tends to perform well, with each tree growing using information from previously grown trees. 
+
+## Boosting Code
+
+``` {r}
+set.seed(789)
+caretBoost = train(Position ~., 
+                  data = traincaretnba_2, 
+                  method = "xgbTree", 
+                  trControl = trainControl("cv", number = 10),
+                  importance = TRUE
+          )
+```
+
+## Boosting Model
+
+```{r}
+predCaretBoost = caretBoost %>% predict(testcaretnba_2)
+table(predCaretBoost, testcaretnba_2$Position)
+
+mean(predCaretBoost == testcaretnba_2$Position)
+```
+
+# Logistic Regression Models 
+
+## Simple Logistic Regression
+
+``` {r}
+traincaretnba_3 = traincaretnba_2 %>%
+  mutate(
+    court_group = case_when(
+      Position %in% c("PG", "SG") ~ 0, 
+      Position %in% c("SF", "PF", "C") ~ 1
+    )
+  )
+
+testcaretnba_3 = testcaretnba_2 %>%
+  mutate(
+    court_group = case_when(
+      Position %in% c("PG", "SG") ~ 0, 
+      Position %in% c("SF", "PF", "C") ~ 1
+    )
+  )
+
+traincaretnba_4 = traincaretnba_3 %>%
+  select(TRB, AST, court_group)
+
+traincaretnba_3 = traincaretnba_3 %>%
+  select(-Position)
+
+modnba3 <- glm(court_group ~ PTS, data = traincaretnba_3, family = "binomial")
+ggplot(data=traincaretnba_3, aes(x=PTS, y=court_group))+
+  geom_point()+
+  geom_line(aes(x = PTS, y = modnba3$fitted), color="blue")
+```
+
+## Simple Logistic Regression Cont. 
+
+``` {r}
+pred1<-predict(modnba3, newdata = testcaretnba_3)
+pred1R<-predict(modnba3, newdata = testcaretnba_3, type="response")
+conf_mat2<-data.frame(testcourt_group=testcaretnba_3$court_group, predOut=pred1R>.3)
+table(conf_mat2$predOut, conf_mat2$testcourt_group)
+
+## CORRECT RATE
+mean(conf_mat2$predOut==conf_mat2$testcourt_group)
+```
+
+
+## Multiple Logistic Regression
+
+``` {r}
+
+library(bestglm)
+mod0 = glm(court_group ~ 1, family = binomial, data = traincaretnba_3)
+best.Xy = traincaretnba_3
+
+# Run best subset
+bglm.AIC = bestglm(Xy = best.Xy, family = binomial, IC = "AIC", 
+                   TopModels = 10)
+Mod_Best_forward = glm(court_group ~ BLK + AST + 
+                         TRB + STL + X3P, 
+                       data = traincaretnba_3, 
+                       family = "binomial")
+
+Mod_Best_backward = glm(court_group ~ TRB + AST + 
+                         STL + PTS + FTA + X2PA + X3P, 
+                       data = traincaretnba_3, 
+                       family = "binomial")
+
+Mod_Best_subset = glm(court_group ~ TRB + AST + 
+                         STL + PTS + FTA + X2PA + X3P, 
+                       data = traincaretnba_3, 
+                       family = "binomial")
+
+# Prediction
+pred_best_forward = predict(Mod_Best_forward, newdata = testcaretnba_3, 
+                            type="response")
+conf_mat_forward = data.frame(testOutcome=testcaretnba_3$court_group, 
+                             predOut=pred_best_forward>.5)
+table(conf_mat_forward$predOut, conf_mat_forward$testOutcome)
+
+pred_best_backward = predict(Mod_Best_backward, newdata = testcaretnba_3, 
+                            type="response")
+conf_mat_backward = data.frame(testOutcome=testcaretnba_3$court_group, 
+                             predOut=pred_best_backward>.5)
+table(conf_mat_backward$predOut, conf_mat_backward$testOutcome)
+
+pred_best_subset = predict(Mod_Best_subset, newdata = testcaretnba_3, 
+                            type="response")
+conf_mat_subset = data.frame(testOutcome=testcaretnba_3$court_group, 
+                             predOut=pred_best_subset>.5)
+table(conf_mat_subset$predOut, conf_mat_subset$testOutcome)
+```
+
+
+## Multiple Logistic Regression Pt. 2
+``` {r}
+mean(conf_mat_forward$predOut==conf_mat_forward$testOutcome)
+mean(conf_mat_backward$predOut==conf_mat_backward$testOutcome)
+mean(conf_mat_subset$predOut==conf_mat_subset$testOutcome)
+```
+
+# Quadratic/Linear Discriminant Analysis Models
+
+## Linear Discriminant Analysis 
+
+``` {r}
+library(MASS)
+
+lda_pos = lda(court_group~., data = traincaretnba_4)
+
+# Prediction 
+pred_LDA = lda_pos %>% predict(testcaretnba_3)
+mean(pred_LDA$class==testcaretnba_3$court_group)
+
+library(klaR)
+library(tidyverse)
+
+traincaretnba_4$court_group = as.factor(traincaretnba_4$court_group)
+
+partimat(court_group~., data = traincaretnba_4, method = "lda")
+```
+
+
+## Quadratic Discriminant Analysis 
+``` {r}
+qda_pos = qda(court_group~., data = traincaretnba_4)
+pred_QDA = qda_pos %>% predict(testcaretnba_3)
+mean(pred_QDA$class==testcaretnba_3$court_group)
+
+partimat(court_group~., data = traincaretnba_4, method = "qda")
+```
+
+
+# Conclusions
+
+# Thank you
+
+
+
+
+
